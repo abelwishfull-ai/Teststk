@@ -1,1035 +1,1090 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SwiftKenya — Deposit via M-Pesa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M-Pesa Deposit</title>
   <style>
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     :root {
-      --green: #16a34a;
+      --green:       #16a34a;
       --green-light: #22c55e;
-      --green-pale: #dcfce7;
-      --green-dark: #15803d;
-      --red: #dc2626;
-      --red-pale: #fee2e2;
-      --orange: #ea580c;
-      --gray: #6b7280;
-      --gray-light: #f3f4f6;
-      --border: #e5e7eb;
-      --white: #ffffff;
-      --shadow: 0 8px 40px rgba(0,0,0,0.13);
+      --green-dark:  #15803d;
+      --green-glow:  rgba(22,163,74,0.35);
+      --red:         #dc2626;
+      --red-light:   #ef4444;
+      --amber:       #d97706;
+      --blue:        #2563eb;
+      --bg:          #0a0f1e;
+      --surface:     #111827;
+      --surface2:    #1f2937;
+      --border:      rgba(255,255,255,0.08);
+      --text:        #f9fafb;
+      --text-muted:  #9ca3af;
+      --radius:      14px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: linear-gradient(135deg, #0f4c25 0%, #16a34a 50%, #052e16 100%);
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
-    }
-
-    /* ── CARD ── */
-    .card {
-      background: var(--white);
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      width: 100%;
-      max-width: 460px;
-      overflow: hidden;
+      overflow-x: hidden;
       position: relative;
     }
 
-    .card-header {
-      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-      padding: 32px 28px 28px;
-      text-align: center;
-      position: relative;
-    }
-    .card-header .logo {
-      width: 60px;
-      height: 60px;
-      background: rgba(255,255,255,0.2);
+    /* ── Animated background orbs ──────────────────────────────────────────── */
+    body::before, body::after {
+      content: '';
+      position: fixed;
       border-radius: 50%;
-      display: flex;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(22,163,74,0.18) 0%, transparent 70%);
+      top: -120px; left: -120px;
+      animation: orb1 12s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%);
+      bottom: -100px; right: -100px;
+      animation: orb2 15s ease-in-out infinite alternate;
+    }
+    @keyframes orb1 { 0%{transform:translate(0,0)} 100%{transform:translate(60px,80px)} }
+    @keyframes orb2 { 0%{transform:translate(0,0)} 100%{transform:translate(-60px,-60px)} }
+
+    /* ── Page content wrapper ──────────────────────────────────────────────── */
+    .page { position: relative; z-index: 1; width: 100%; max-width: 480px; }
+
+    /* ── Logo / Header ─────────────────────────────────────────────────────── */
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 28px;
+      animation: fadeDown 0.6s ease both;
+    }
+    .logo-icon {
+      width: 68px; height: 68px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 14px;
-      font-size: 28px;
-      border: 2px solid rgba(255,255,255,0.4);
+      font-size: 32px;
+      box-shadow: 0 8px 32px var(--green-glow), 0 0 0 1px rgba(255,255,255,0.08);
+      margin-bottom: 14px;
+      animation: pulse-icon 3s ease-in-out infinite;
     }
-    .card-header h1 {
-      color: white;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+    @keyframes pulse-icon {
+      0%,100%{ box-shadow: 0 8px 32px var(--green-glow), 0 0 0 1px rgba(255,255,255,0.08); }
+      50%{ box-shadow: 0 8px 48px rgba(22,163,74,0.55), 0 0 0 4px rgba(22,163,74,0.15); }
     }
-    .card-header p {
-      color: rgba(255,255,255,0.8);
-      font-size: 13px;
-      margin-top: 6px;
-    }
+    .logo-wrap h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo-wrap h1 span { color: var(--green-light); }
+    .logo-wrap p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
 
-    .card-body { padding: 28px; }
-
-    /* ── FORM ── */
-    .field {
-      margin-bottom: 20px;
+    /* ── Card ──────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      animation: fadeUp 0.6s ease 0.1s both;
       position: relative;
+      overflow: hidden;
     }
-    .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 7px;
-      letter-spacing: 0.2px;
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), var(--green-light), transparent);
     }
-    .field label .required { color: var(--red); margin-left: 2px; }
+
+    /* ── Form groups ───────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 20px; position: relative; }
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .form-group label .icon { font-size: 14px; }
 
     .input-wrap { position: relative; }
-    .input-wrap .icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 17px;
-      pointer-events: none;
-    }
-    .field input {
+    .input-wrap input {
       width: 100%;
-      padding: 13px 14px 13px 44px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      font-size: 15px;
-      color: #111827;
-      background: #fafafa;
-      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 16px;
+      font-family: inherit;
+      padding: 14px 44px 14px 16px;
       outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
     }
-    .field input:focus {
+    .input-wrap input::placeholder { color: #4b5563; }
+    .input-wrap input:focus {
       border-color: var(--green);
-      background: white;
-      box-shadow: 0 0 0 4px rgba(22,163,74,0.12);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.15);
+      background: #1c2a1e;
     }
-    .field input.valid {
-      border-color: var(--green);
-      background: #f0fdf4;
+    .input-wrap input.valid {
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
     }
-    .field input.error {
-      border-color: var(--red);
-      background: #fff5f5;
-      box-shadow: 0 0 0 4px rgba(220,38,38,0.09);
+    .input-wrap input.invalid {
+      border-color: var(--red-light);
+      box-shadow: 0 0 0 3px rgba(220,38,38,0.12);
     }
-
-    .valid-icon, .error-icon {
+    .input-wrap .status-icon {
       position: absolute;
       right: 14px;
       top: 50%;
       transform: translateY(-50%);
       font-size: 18px;
-      opacity: 0;
       transition: opacity 0.2s;
+      pointer-events: none;
     }
-    .field input.valid ~ .valid-icon { opacity: 1; }
-    .field input.error ~ .error-icon { opacity: 1; }
 
-    .field-hint {
-      margin-top: 5px;
+    /* ── Hint text ─────────────────────────────────────────────────────────── */
+    .hint {
       font-size: 12px;
-      color: var(--gray);
-      min-height: 16px;
-      transition: color 0.2s;
+      margin-top: 6px;
+      min-height: 18px;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .field-hint.err { color: var(--red); }
-    .field-hint.ok  { color: var(--green); }
+    .hint.ok  { color: var(--green-light); }
+    .hint.err { color: #f87171; }
+    .hint.tip { color: var(--text-muted); }
 
-    /* ── BUTTON ── */
+    /* ── Amount display ────────────────────────────────────────────────────── */
+    .amount-display {
+      display: inline-block;
+      background: rgba(22,163,74,0.1);
+      border: 1px solid rgba(22,163,74,0.2);
+      color: var(--green-light);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 6px;
+      transition: all 0.3s;
+      min-height: 24px;
+    }
+
+    /* ── Submit Button ─────────────────────────────────────────────────────── */
     .btn {
       width: 100%;
-      padding: 15px;
-      border: none;
-      border-radius: 14px;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: white;
       font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
+      font-weight: 800;
       letter-spacing: 0.3px;
-      transition: all 0.2s;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.25s;
+      box-shadow: 0 4px 20px var(--green-glow);
+      position: relative;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      margin-top: 8px;
     }
-    .btn-primary {
-      background: linear-gradient(135deg, #16a34a, #15803d);
-      color: white;
-      box-shadow: 0 4px 16px rgba(22,163,74,0.35);
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
     }
-    .btn-primary:hover:not(:disabled) {
+    .btn:hover:not(:disabled)::after { opacity: 1; }
+    .btn:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(22,163,74,0.45);
+      box-shadow: 0 8px 32px rgba(22,163,74,0.5);
     }
-    .btn-primary:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    .btn-primary:disabled {
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled {
       opacity: 0.55;
       cursor: not-allowed;
       transform: none;
     }
-    .btn-secondary {
-      background: var(--gray-light);
-      color: #374151;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .btn-secondary:hover { background: var(--border); }
 
-    /* ── SPINNER ── */
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── Spinner ───────────────────────────────────────────────────────────── */
     .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,0.35);
-      border-top-color: white;
+      width: 20px; height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
       border-radius: 50%;
-      animation: spin 0.75s linear infinite;
+      animation: spin 0.7s linear infinite;
       flex-shrink: 0;
     }
-    .spinner-dark {
-      border-color: rgba(22,163,74,0.25);
-      border-top-color: var(--green);
+    .spinner-sm {
+      width: 14px; height: 14px;
+      border-width: 2px;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── TOAST ── */
+    /* ── Status Panel (shows after STK push) ───────────────────────────────── */
+    .status-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+      animation: fadeUp 0.4s ease both;
+    }
+    .status-panel.active { display: block; }
+    .status-panel .sp-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .status-row .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+      animation: blink 1.2s ease-in-out infinite;
+    }
+    .dot.success { background: var(--green-light); animation: none; }
+    .dot.failed  { background: var(--red-light); animation: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    .txn-id {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      word-break: break-all;
+      background: rgba(255,255,255,0.04);
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-top: 6px;
+    }
+    .receipt-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    }
+    .receipt-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(37,99,235,0.5); }
+    .receipt-btn:active { transform: translateY(0); }
+
+    /* ── Notification toast ────────────────────────────────────────────────── */
     #toast-container {
       position: fixed;
       top: 20px;
       right: 20px;
+      z-index: 9999;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      z-index: 9999;
-      max-width: 340px;
+      pointer-events: none;
     }
     .toast {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px 18px;
+      max-width: 340px;
+      min-width: 280px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      padding: 14px 18px;
-      border-radius: 14px;
-      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
-      font-size: 14px;
-      font-weight: 500;
-      animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
-      transition: opacity 0.3s, transform 0.3s;
-      min-width: 240px;
-    }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(60px) scale(0.9); }
-      to   { opacity: 1; transform: translateX(0) scale(1); }
-    }
-    .toast.out {
-      opacity: 0;
-      transform: translateX(60px) scale(0.9);
-    }
-    .toast-success { background: #052e16; color: #bbf7d0; border-left: 4px solid #22c55e; }
-    .toast-error   { background: #450a0a; color: #fecaca; border-left: 4px solid #ef4444; }
-    .toast-info    { background: #1e3a5f; color: #bae6fd; border-left: 4px solid #38bdf8; }
-    .toast-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
-    .toast-body { flex: 1; }
-    .toast-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
-    .toast-msg { font-size: 13px; opacity: 0.88; line-height: 1.4; }
-
-    /* ── STATUS PANEL ── */
-    #status-panel {
-      display: none;
-      background: #f0fdf4;
-      border: 2px solid #bbf7d0;
-      border-radius: 14px;
-      padding: 18px 20px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    #status-panel.error-panel {
-      background: var(--red-pale);
-      border-color: #fca5a5;
-    }
-    #status-panel .status-icon { font-size: 36px; margin-bottom: 8px; }
-    #status-panel .status-title { font-weight: 700; font-size: 16px; color: #166534; margin-bottom: 4px; }
-    #status-panel.error-panel .status-title { color: var(--red); }
-    #status-panel .status-msg { font-size: 13px; color: #4b5563; line-height: 1.5; }
-
-    /* ── POLLING AREA ── */
-    #polling-section {
-      display: none;
-      margin-bottom: 20px;
-      background: #fffbeb;
-      border: 2px solid #fde68a;
-      border-radius: 14px;
-      padding: 18px 20px;
-      text-align: center;
-    }
-    #polling-section .poll-title {
-      font-weight: 700;
-      font-size: 15px;
-      color: #92400e;
-      margin-bottom: 6px;
-    }
-    #polling-section .poll-msg {
-      font-size: 13px;
-      color: #78350f;
-      margin-bottom: 14px;
-      line-height: 1.5;
-    }
-    .poll-dots span {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #f59e0b;
-      margin: 0 3px;
-      animation: dotPulse 1.4s infinite ease-in-out;
-    }
-    .poll-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .poll-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes dotPulse {
-      0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-      40% { transform: scale(1.1); opacity: 1; }
-    }
-    #poll-counter { font-size: 12px; color: #92400e; margin-top: 8px; }
-
-    /* ── RECEIPT ── */
-    #receipt-section { display: none; }
-    .receipt-card {
-      border-radius: 18px;
+      pointer-events: all;
+      animation: toastIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both;
+      border-left: 4px solid var(--green);
+      position: relative;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      margin-bottom: 14px;
-      animation: receiptReveal 0.5s cubic-bezier(0.34,1.56,0.64,1);
     }
-    @keyframes receiptReveal {
-      from { opacity: 0; transform: scale(0.85) translateY(20px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .receipt-header-inner {
-      background: linear-gradient(135deg, #16a34a, #15803d);
-      color: white;
-      padding: 22px 20px;
-      text-align: center;
-    }
-    .receipt-check {
-      font-size: 46px;
-      animation: pop 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
-    }
-    @keyframes pop {
-      from { transform: scale(0); }
-      to   { transform: scale(1); }
-    }
-    .receipt-header-inner h2 { font-size: 18px; font-weight: 700; margin-top: 8px; }
-    .receipt-header-inner p  { font-size: 12px; opacity: 0.8; margin-top: 3px; }
-
-    .receipt-amount-block {
-      background: #f0fdf4;
-      border-bottom: 1px solid #bbf7d0;
-      padding: 18px 20px;
-      text-align: center;
-    }
-    .receipt-amount-block .lbl { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
-    .receipt-amount-block .amt {
-      font-size: 38px;
-      font-weight: 800;
-      color: var(--green-dark);
-      animation: countUp 0.6s 0.4s ease both;
-    }
-    @keyframes countUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .receipt-rows { background: white; padding: 4px 20px 12px; }
-    .receipt-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid #f3f4f6;
-      font-size: 13px;
-      animation: rowFade 0.4s ease both;
-    }
-    .receipt-row:last-child { border-bottom: none; }
-    @keyframes rowFade {
-      from { opacity: 0; transform: translateX(-10px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-    .receipt-row .rk { color: var(--gray); font-weight: 500; }
-    .receipt-row .rv { font-weight: 700; color: #111827; text-align: right; max-width: 60%; word-break: break-all; }
-
-    .badge-paid {
-      display: inline-block;
-      background: var(--green-pale);
-      color: var(--green-dark);
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 12px;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .receipt-footer-inner {
-      background: #f9fafb;
-      padding: 14px 20px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--gray);
-      border-top: 1px solid var(--border);
-    }
-
-    /* ── DOWNLOAD BTN ── */
-    .btn-download {
-      background: linear-gradient(135deg, #1d4ed8, #1e40af);
-      color: white;
-      box-shadow: 0 4px 14px rgba(29,78,216,0.3);
-      margin-top: 0;
-    }
-    .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(29,78,216,0.4); }
-
-    /* ── DIVIDER ── */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 20px 0;
-      color: var(--gray);
-      font-size: 12px;
-    }
-    .divider::before, .divider::after {
+    .toast.error { border-left-color: var(--red-light); }
+    .toast.warning { border-left-color: var(--amber); }
+    .toast.info { border-left-color: var(--blue); }
+    .toast::after {
       content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: currentColor;
+      animation: toastProgress var(--duration, 5s) linear forwards;
+    }
+    .toast.success::after { color: var(--green-light); }
+    .toast.error::after { color: var(--red-light); }
+    .toast.warning::after { color: var(--amber); }
+    .toast.info::after { color: #60a5fa; }
+    @keyframes toastProgress { from{width:100%} to{width:0%} }
+    .toast-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+    .toast.success .toast-title { color: var(--green-light); }
+    .toast.error   .toast-title { color: #f87171; }
+    .toast.warning .toast-title { color: #fbbf24; }
+    .toast.info    .toast-title { color: #60a5fa; }
+    .toast-msg { font-size: 13px; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; }
+    .toast-close {
+      position: absolute; top: 8px; right: 10px;
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 16px; line-height: 1;
+      padding: 2px 4px;
+      transition: color 0.15s;
+    }
+    .toast-close:hover { color: var(--text); }
+    @keyframes toastIn {
+      from { opacity:0; transform:translateX(40px) scale(0.9); }
+      to   { opacity:1; transform:translateX(0)     scale(1); }
+    }
+    .toast.leaving {
+      animation: toastOut 0.3s ease forwards;
+    }
+    @keyframes toastOut {
+      to { opacity:0; transform:translateX(40px) scale(0.9); height:0; padding:0; margin:0; }
     }
 
-    /* ── FOOTER ── */
-    .page-footer {
-      margin-top: 18px;
-      text-align: center;
-      font-size: 12px;
-      color: rgba(255,255,255,0.6);
-    }
-
-    /* ── OVERLAY SPINNER ── */
-    #overlay {
-      display: none;
+    /* ── Receipt Modal ─────────────────────────────────────────────────────── */
+    #receipt-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 8888;
+      z-index: 9998;
+      display: none;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 14px;
+      padding: 20px;
     }
-    #overlay.show { display: flex; }
-    .overlay-spinner {
-      width: 54px;
-      height: 54px;
-      border: 5px solid rgba(255,255,255,0.25);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-    #overlay p {
-      color: white;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-
-    /* ── RIPPLE ── */
-    @keyframes ripple {
-      to { transform: scale(2.5); opacity: 0; }
-    }
-    .btn-primary .ripple {
+    #receipt-modal.open { display: flex; }
+    .modal-backdrop {
       position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      animation: fadeIn 0.3s ease both;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .modal-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 20px;
+      background: white;
+      animation: modalPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    }
+    @keyframes modalPop {
+      from { opacity:0; transform:scale(0.85) translateY(20px); }
+      to   { opacity:1; transform:scale(1)    translateY(0); }
+    }
+    .modal-toolbar {
+      position: sticky;
+      top: 0;
+      background: #15803d;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      z-index: 10;
+      border-radius: 20px 20px 0 0;
+    }
+    .modal-toolbar span { font-weight: 700; font-size: 15px; }
+    .modal-close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 32px; height: 32px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.35);
-      transform: scale(0);
-      animation: ripple 0.55s linear;
-      pointer-events: none;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .modal-close-btn:hover { background: rgba(255,255,255,0.35); }
+    #receipt-frame {
+      width: 100%;
+      min-height: 500px;
+      border: none;
+      display: block;
+    }
+    .modal-content.plain { background: #0a0f1e; color: white; }
+    #receipt-plain {
+      padding: 0;
     }
 
-    /* ── SUCCESS CONFETTI ── */
-    #confetti-layer {
+    /* ── Info strip ────────────────────────────────────────────────────────── */
+    .info-strip {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+    .info-chip {
+      flex: 1;
+      min-width: 120px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-chip strong { color: var(--text); font-size: 13px; }
+
+    /* ── Loading overlay ───────────────────────────────────────────────────── */
+    #loading-overlay {
       position: fixed;
       inset: 0;
-      pointer-events: none;
-      z-index: 7777;
-      overflow: hidden;
+      background: rgba(10,15,30,0.88);
+      backdrop-filter: blur(6px);
+      z-index: 9000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
     }
-    .conf-piece {
-      position: absolute;
-      top: -20px;
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      animation: confFall linear forwards;
+    #loading-overlay.active { display: flex; }
+    .big-spinner {
+      width: 64px; height: 64px;
+      border: 5px solid rgba(255,255,255,0.1);
+      border-top-color: var(--green-light);
+      border-right-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
     }
-    @keyframes confFall {
-      to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    .loading-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .loading-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 260px;
+      line-height: 1.6;
+    }
+    .loading-dots span {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green-light);
+      margin: 0 3px;
+      animation: loadDot 1.4s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes loadDot { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+    /* ── Shared animations ─────────────────────────────────────────────────── */
+    @keyframes fadeDown {
+      from { opacity:0; transform:translateY(-20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    /* ── Phone format chips ────────────────────────────────────────────────── */
+    .phone-formats {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .fmt-chip {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-muted);
+      background: var(--surface2);
+      font-family: monospace;
     }
   </style>
 </head>
 <body>
 
-<!-- Overlay spinner -->
-<div id="overlay">
-  <div class="overlay-spinner"></div>
-  <p id="overlay-msg">Processing…</p>
-</div>
-
-<!-- Toast container -->
+<!-- ── Background ─────────────────────────────────────────────────────────── -->
 <div id="toast-container"></div>
 
-<!-- Confetti layer -->
-<div id="confetti-layer"></div>
+<!-- ── Loading Overlay ────────────────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="big-spinner"></div>
+  <div class="loading-text" id="loading-title">Sending STK Push…</div>
+  <div class="loading-sub" id="loading-sub">Check your phone for the M-Pesa payment prompt and enter your PIN.</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
 
-<!-- Main card -->
-<div class="card">
-  <div class="card-header">
-    <div class="logo">💳</div>
-    <h1>SwiftKenya Deposit</h1>
-    <p>Secure M-Pesa STK Push Payment</p>
-  </div>
-
-  <div class="card-body">
-
-    <!-- Status panel (success / error info) -->
-    <div id="status-panel">
-      <div class="status-icon" id="sp-icon"></div>
-      <div class="status-title" id="sp-title"></div>
-      <div class="status-msg" id="sp-msg"></div>
+<!-- ── Receipt Modal ──────────────────────────────────────────────────────── -->
+<div id="receipt-modal">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-content" id="modal-content">
+    <div class="modal-toolbar">
+      <span>🧾 Payment Receipt</span>
+      <button class="modal-close-btn" id="modal-close">✕</button>
     </div>
-
-    <!-- Polling section -->
-    <div id="polling-section">
-      <div class="poll-title">⏳ Waiting for M-Pesa Confirmation</div>
-      <div class="poll-msg">Check your phone and enter your M-Pesa PIN to complete the payment.</div>
-      <div class="poll-dots"><span></span><span></span><span></span></div>
-      <div id="poll-counter"></div>
-    </div>
-
-    <!-- Receipt section -->
-    <div id="receipt-section">
-      <div class="receipt-card" id="receipt-card">
-        <div class="receipt-header-inner">
-          <div class="receipt-check" id="rec-check">✅</div>
-          <h2>Payment Successful!</h2>
-          <p>M-Pesa Deposit Confirmed</p>
-        </div>
-        <div class="receipt-amount-block">
-          <div class="lbl">Amount Paid</div>
-          <div class="amt" id="rec-amount">KES 0</div>
-        </div>
-        <div class="receipt-rows" id="receipt-rows"></div>
-        <div class="receipt-footer-inner">Thank you! Keep this receipt for your records.</div>
-      </div>
-
-      <button class="btn btn-download" id="dl-btn" onclick="downloadReceipt()">
-        ⬇️ Download Receipt (PDF)
-      </button>
-      <button class="btn btn-secondary" onclick="resetForm()">
-        🔄 Make Another Payment
-      </button>
-    </div>
-
-    <!-- Deposit form -->
-    <form id="deposit-form" novalidate>
-
-      <div class="field">
-        <label>Full Name <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="icon">👤</span>
-          <input type="text" id="f-name" placeholder="e.g. John Mwangi" autocomplete="name" oninput="liveValidate('name')" />
-          <span class="valid-icon">✅</span>
-          <span class="error-icon">❌</span>
-        </div>
-        <div class="field-hint" id="hint-name">Enter the customer's full name</div>
-      </div>
-
-      <div class="field">
-        <label>M-Pesa Phone Number <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="icon">📱</span>
-          <input type="tel" id="f-phone" placeholder="07XXXXXXXX or 2547XXXXXXXX" maxlength="13" autocomplete="tel" oninput="liveValidate('phone')" />
-          <span class="valid-icon">✅</span>
-          <span class="error-icon">❌</span>
-        </div>
-        <div class="field-hint" id="hint-phone">Format: 07XXXXXXXX or 2547XXXXXXXX</div>
-      </div>
-
-      <div class="field">
-        <label>Amount (KES) <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="icon">💵</span>
-          <input type="number" id="f-amount" placeholder="e.g. 500" min="1" step="1" autocomplete="off" oninput="liveValidate('amount')" />
-          <span class="valid-icon">✅</span>
-          <span class="error-icon">❌</span>
-        </div>
-        <div class="field-hint" id="hint-amount">Minimum amount: KES 1</div>
-      </div>
-
-      <div class="divider">Secured by HashBack & M-Pesa</div>
-
-      <button type="submit" class="btn btn-primary" id="submit-btn" style="position:relative;overflow:hidden;">
-        <span id="btn-text">💳 Send STK Push</span>
-        <div class="spinner" id="btn-spinner" style="display:none;"></div>
-      </button>
-
-    </form>
-
+    <div id="receipt-plain"></div>
   </div>
 </div>
 
-<div class="page-footer">
-  🔒 256-bit SSL Encrypted &nbsp;|&nbsp; Powered by M-Pesa &amp; HashBack
+<!-- ── Main ───────────────────────────────────────────────────────────────── -->
+<div class="page">
+  <div class="logo-wrap">
+    <div class="logo-icon">📱</div>
+    <h1>M-Pesa <span>Deposit</span></h1>
+    <p>Instant &amp; Secure · Powered by PalPluss</p>
+  </div>
+
+  <div class="card">
+    <form id="pay-form" autocomplete="off" novalidate>
+
+      <!-- Name -->
+      <div class="form-group">
+        <label><span class="icon">👤</span> Full Name</label>
+        <div class="input-wrap">
+          <input
+            type="text"
+            id="name"
+            placeholder="e.g. John Doe"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span class="status-icon" id="name-icon"></span>
+        </div>
+        <div class="hint tip" id="name-hint">Enter the depositor's full name</div>
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label><span class="icon">📞</span> M-Pesa Phone Number</label>
+        <div class="input-wrap">
+          <input
+            type="tel"
+            id="phone"
+            placeholder="e.g. 0712345678"
+            autocomplete="off"
+            maxlength="15"
+          />
+          <span class="status-icon" id="phone-icon"></span>
+        </div>
+        <div class="hint tip" id="phone-hint">Enter a valid Safaricom or Airtel M-Pesa number</div>
+        <div class="phone-formats">
+          <span class="fmt-chip">07XXXXXXXX</span>
+          <span class="fmt-chip">01XXXXXXXX</span>
+          <span class="fmt-chip">+2547XXXXXXXX</span>
+          <span class="fmt-chip">2547XXXXXXXX</span>
+        </div>
+      </div>
+
+      <!-- Amount -->
+      <div class="form-group">
+        <label><span class="icon">💰</span> Amount (KES)</label>
+        <div class="input-wrap">
+          <input
+            type="number"
+            id="amount"
+            placeholder="e.g. 500"
+            min="1"
+            step="1"
+          />
+          <span class="status-icon" id="amount-icon"></span>
+        </div>
+        <div class="hint tip" id="amount-hint">Minimum deposit is KES 1</div>
+        <div class="amount-display" id="amount-display"></div>
+      </div>
+
+      <button type="submit" class="btn" id="pay-btn">
+        <span id="btn-icon">📲</span>
+        <span id="btn-text">Send M-Pesa Prompt</span>
+      </button>
+    </form>
+
+    <!-- Status Panel -->
+    <div class="status-panel" id="status-panel">
+      <div class="sp-title">Transaction Status</div>
+      <div class="status-row">
+        <div class="dot" id="status-dot"></div>
+        <span id="status-text">Waiting for payment…</span>
+        <div class="spinner spinner-sm" id="status-spinner" style="margin-left:auto;"></div>
+      </div>
+      <div class="txn-id" id="txn-id-display"></div>
+      <button class="receipt-btn" id="open-receipt-btn" style="display:none;">
+        🧾 View Payment Receipt
+      </button>
+    </div>
+  </div>
+
+  <div class="info-strip">
+    <div class="info-chip">🔒 <div><strong>Secure</strong><br/>256-bit SSL</div></div>
+    <div class="info-chip">⚡ <div><strong>Instant</strong><br/>Real-time prompt</div></div>
+    <div class="info-chip">✅ <div><strong>Verified</strong><br/>PalPluss API</div></div>
+  </div>
 </div>
 
 <script>
-  const BACKEND = "https://swiftkenya-backend.onrender.com";
+  // ── Config ────────────────────────────────────────────────────────────────
+  const API_BASE = 'https://teststk-b20u.onrender.com';
+  const POLL_INTERVAL_MS = 3000;
+  const POLL_MAX_TRIES   = 60; // 3 min max
 
-  let checkoutId = null;
-  let pollAmount = 0;
-  let pollName   = "";
-  let pollPhone  = "";
-  let pollTimer  = null;
-  let pollCount  = 0;
-  const MAX_POLLS = 12;
-  const POLL_INTERVAL = 5000;
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentTxnId   = null;
+  let pollTimer      = null;
+  let pollCount      = 0;
+  let currentReceipt = null;
 
-  // ── PHONE NORMALIZE ───────────────────────────────────────────────────────
-  function normalizePhone(raw) {
-    const s = String(raw).trim().replace(/\s+/g, "").replace(/-/g, "");
-    if (/^2547\d{8}$/.test(s)) return s;
-    if (/^07\d{8}$/.test(s))   return "254" + s.slice(1);
-    if (/^7\d{8}$/.test(s))    return "254" + s;
-    return null;
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const form           = document.getElementById('pay-form');
+  const nameInput      = document.getElementById('name');
+  const phoneInput     = document.getElementById('phone');
+  const amountInput    = document.getElementById('amount');
+  const nameHint       = document.getElementById('name-hint');
+  const phoneHint      = document.getElementById('phone-hint');
+  const amountHint     = document.getElementById('amount-hint');
+  const nameIcon       = document.getElementById('name-icon');
+  const phoneIcon      = document.getElementById('phone-icon');
+  const amountIcon     = document.getElementById('amount-icon');
+  const amountDisplay  = document.getElementById('amount-display');
+  const payBtn         = document.getElementById('pay-btn');
+  const btnText        = document.getElementById('btn-text');
+  const btnIcon        = document.getElementById('btn-icon');
+  const statusPanel    = document.getElementById('status-panel');
+  const statusDot      = document.getElementById('status-dot');
+  const statusText     = document.getElementById('status-text');
+  const statusSpinner  = document.getElementById('status-spinner');
+  const txnIdDisplay   = document.getElementById('txn-id-display');
+  const openReceiptBtn = document.getElementById('open-receipt-btn');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingTitle   = document.getElementById('loading-title');
+  const loadingSub     = document.getElementById('loading-sub');
+  const receiptModal   = document.getElementById('receipt-modal');
+  const receiptPlain   = document.getElementById('receipt-plain');
+  const modalBackdrop  = document.getElementById('modal-backdrop');
+  const modalClose     = document.getElementById('modal-close');
+
+  // ── Phone validation ──────────────────────────────────────────────────────
+  function normalisePhone(raw) {
+    let v = raw.replace(/[\s\-()]/g, '');
+    if (v.startsWith('+')) v = v.slice(1);
+    if (v.startsWith('0'))  v = '254' + v.slice(1);
+    return v;
   }
-  function isValidPhone(raw) { return normalizePhone(raw) !== null; }
-
-  // ── LIVE VALIDATION ───────────────────────────────────────────────────────
-  function liveValidate(field) {
-    const inp = document.getElementById("f-" + field);
-    const hint = document.getElementById("hint-" + field);
-
-    if (field === "name") {
-      const v = inp.value.trim();
-      if (!v) { setFieldState(inp, hint, "idle", "Enter the customer's full name"); return; }
-      if (v.length < 2) { setFieldState(inp, hint, "error", "Name must be at least 2 characters"); return; }
-      setFieldState(inp, hint, "valid", "Looks good ✓");
-    }
-
-    if (field === "phone") {
-      const v = inp.value.trim();
-      if (!v) { setFieldState(inp, hint, "idle", "Format: 07XXXXXXXX or 2547XXXXXXXX"); return; }
-      const norm = normalizePhone(v);
-      if (!norm) { setFieldState(inp, hint, "error", "Invalid number — use 07XXXXXXXX or 2547XXXXXXXX"); return; }
-      setFieldState(inp, hint, "valid", `Will send to ${norm} ✓`);
-    }
-
-    if (field === "amount") {
-      const v = parseFloat(inp.value);
-      if (!inp.value) { setFieldState(inp, hint, "idle", "Minimum amount: KES 1"); return; }
-      if (isNaN(v) || v <= 0) { setFieldState(inp, hint, "error", "Enter a valid positive amount"); return; }
-      if (!Number.isInteger(v)) { setFieldState(inp, hint, "error", "Amount must be a whole number (no decimals)"); return; }
-      setFieldState(inp, hint, "valid", `KES ${v.toLocaleString("en-KE")} — valid ✓`);
-    }
+  function isValidPhone(raw) {
+    const norm = normalisePhone(raw);
+    return /^254(7|1)\d{8}$/.test(norm);
   }
 
-  function setFieldState(inp, hint, state, msg) {
-    inp.classList.remove("valid","error");
-    hint.classList.remove("ok","err");
-    if (state === "valid") { inp.classList.add("valid"); hint.classList.add("ok"); }
-    if (state === "error") { inp.classList.add("error"); hint.classList.add("err"); }
+  // ── Validation helpers ────────────────────────────────────────────────────
+  function setFieldState(input, icon, hint, state, msg) {
+    input.classList.remove('valid', 'invalid');
+    hint.className = 'hint ' + (state === 'ok' ? 'ok' : state === 'err' ? 'err' : 'tip');
     hint.textContent = msg;
+    if (state === 'ok')  { input.classList.add('valid');   icon.textContent = '✅'; }
+    if (state === 'err') { input.classList.add('invalid'); icon.textContent = '❌'; }
+    if (state === 'tip') { icon.textContent = ''; }
   }
 
-  // ── TOAST ─────────────────────────────────────────────────────────────────
-  function toast(type, title, msg) {
-    const c = document.getElementById("toast-container");
-    const icons = { success: "✅", error: "❌", info: "ℹ️" };
-    const el = document.createElement("div");
-    el.className = `toast toast-${type}`;
-    el.innerHTML = `<div class="toast-icon">${icons[type]||"•"}</div>
-      <div class="toast-body">
-        <div class="toast-title">${title}</div>
-        <div class="toast-msg">${msg}</div>
-      </div>`;
-    c.appendChild(el);
-    setTimeout(() => {
-      el.classList.add("out");
-      setTimeout(() => el.remove(), 350);
-    }, 5000);
+  function validateName(val) {
+    const v = val.trim();
+    if (!v)          return { state:'tip', msg:'Enter the depositor\'s full name' };
+    if (v.length<2)  return { state:'err', msg:'Name must be at least 2 characters' };
+    if (v.length>60) return { state:'err', msg:'Name is too long (max 60 characters)' };
+    if (!/^[a-zA-Z\s'\-]+$/.test(v)) return { state:'err', msg:'Name should contain only letters' };
+    return { state:'ok', msg:'✓ Name looks good' };
   }
 
-  // ── OVERLAY ───────────────────────────────────────────────────────────────
-  function showOverlay(msg) {
-    document.getElementById("overlay-msg").textContent = msg;
-    document.getElementById("overlay").classList.add("show");
-  }
-  function hideOverlay() { document.getElementById("overlay").classList.remove("show"); }
-
-  // ── BTN STATE ─────────────────────────────────────────────────────────────
-  function setBtnLoading(yes, label) {
-    const btn = document.getElementById("submit-btn");
-    const txt = document.getElementById("btn-text");
-    const sp  = document.getElementById("btn-spinner");
-    btn.disabled = yes;
-    txt.style.display = yes ? "none" : "inline";
-    sp.style.display  = yes ? "inline-block" : "none";
-    if (!yes && label) txt.textContent = label;
-  }
-
-  // ── STATUS PANEL ──────────────────────────────────────────────────────────
-  function showStatusPanel(type, icon, title, msg) {
-    const p = document.getElementById("status-panel");
-    p.className = type === "error" ? "error-panel" : "";
-    p.style.display = "block";
-    document.getElementById("sp-icon").textContent = icon;
-    document.getElementById("sp-title").textContent = title;
-    document.getElementById("sp-msg").textContent = msg;
-  }
-  function hideStatusPanel() { document.getElementById("status-panel").style.display = "none"; }
-
-  // ── CONFETTI ──────────────────────────────────────────────────────────────
-  function launchConfetti() {
-    const layer = document.getElementById("confetti-layer");
-    const colors = ["#22c55e","#16a34a","#facc15","#38bdf8","#f472b6","#fb923c"];
-    for (let i = 0; i < 70; i++) {
-      const p = document.createElement("div");
-      p.className = "conf-piece";
-      p.style.cssText = [
-        `left:${Math.random()*100}%`,
-        `background:${colors[Math.floor(Math.random()*colors.length)]}`,
-        `width:${6+Math.random()*8}px`,
-        `height:${6+Math.random()*8}px`,
-        `border-radius:${Math.random()>0.5?"50%":"2px"}`,
-        `animation-duration:${1.5+Math.random()*1.5}s`,
-        `animation-delay:${Math.random()*0.8}s`,
-      ].join(";");
-      layer.appendChild(p);
-      setTimeout(() => p.remove(), 3500);
+  function validatePhone(val) {
+    const v = val.trim();
+    if (!v) return { state:'tip', msg:'Enter a valid Safaricom or Airtel M-Pesa number' };
+    if (!isValidPhone(v)) {
+      const cleaned = v.replace(/\D/g,'');
+      if (cleaned.length < 10) return { state:'err', msg:'Number too short — at least 10 digits needed' };
+      if (cleaned.length > 12) return { state:'err', msg:'Number too long — check for extra digits' };
+      return { state:'err', msg:'Invalid format — use 07XXXXXXXX, 01XXXXXXXX, or +2547XXXXXXXX' };
     }
+    const norm = normalisePhone(v);
+    return { state:'ok', msg:`✓ Valid number → ${norm}` };
   }
 
-  // ── RECEIPT ───────────────────────────────────────────────────────────────
-  let receiptData = {};
-
-  function showReceipt(data) {
-    receiptData = data;
-    document.getElementById("rec-amount").textContent = `KES ${Number(data.amount).toLocaleString("en-KE")}`;
-
-    const rows = [
-      ["Customer",    data.name],
-      ["Phone",       data.phone],
-      ["M-Pesa Receipt", data.receipt || data.checkout_id || "—"],
-      ["Reference",   data.reference || "DEPOSIT"],
-      ["Date & Time", data.date],
-      ["Status",      '<span class="badge-paid">✅ Paid</span>'],
-    ];
-
-    const container = document.getElementById("receipt-rows");
-    container.innerHTML = "";
-    rows.forEach(([k, v], i) => {
-      const row = document.createElement("div");
-      row.className = "receipt-row";
-      row.style.animationDelay = `${0.1 + i * 0.07}s`;
-      row.innerHTML = `<span class="rk">${k}</span><span class="rv">${v}</span>`;
-      container.appendChild(row);
-    });
-
-    document.getElementById("deposit-form").style.display = "none";
-    document.getElementById("polling-section").style.display = "none";
-    hideStatusPanel();
-    document.getElementById("receipt-section").style.display = "block";
-    launchConfetti();
-    toast("success", "Payment Confirmed!", `KES ${Number(data.amount).toLocaleString("en-KE")} received successfully.`);
+  function validateAmount(val) {
+    const v = val.trim();
+    if (!v) return { state:'tip', msg:'Minimum deposit is KES 1' };
+    const n = Number(v);
+    if (isNaN(n) || v === '') return { state:'err', msg:'Enter a valid number' };
+    if (n < 1)      return { state:'err', msg:'Minimum deposit is KES 1' };
+    if (n > 150000) return { state:'err', msg:'Maximum STK Push limit is KES 150,000' };
+    if (!Number.isInteger(n)) return { state:'err', msg:'Amount must be a whole number (no decimals)' };
+    return { state:'ok', msg:`✓ Amount is valid` };
   }
 
-  // ── DOWNLOAD ─────────────────────────────────────────────────────────────
-  function downloadReceipt() {
-    const d = receiptData;
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-<title>Receipt</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0fdf4;display:flex;justify-content:center;padding:40px 20px;}
-  .r{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12);max-width:400px;width:100%;overflow:hidden;}
-  .rh{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:28px 24px;text-align:center;}
-  .rh .ci{font-size:48px;margin-bottom:8px;}
-  .rh h1{font-size:20px;font-weight:700;}
-  .rh p{font-size:13px;opacity:.8;margin-top:4px;}
-  .ra{background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:20px;text-align:center;}
-  .ra .lb{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;}
-  .ra .am{font-size:38px;font-weight:800;color:#15803d;}
-  .rb{padding:4px 20px 16px;background:#fff;}
-  .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13px;}
-  .row:last-child{border-bottom:none;}
-  .rk{color:#6b7280;font-weight:500;}
-  .rv{font-weight:700;color:#111;text-align:right;}
-  .badge{display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:3px 12px;border-radius:999px;text-transform:uppercase;}
-  .rf{background:#f9fafb;padding:14px 20px;text-align:center;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;}
-  .wm{text-align:center;margin-top:20px;font-size:11px;color:#9ca3af;}
-</style></head><body>
-<div class="r">
-  <div class="rh"><div class="ci">✅</div><h1>Payment Receipt</h1><p>M-Pesa Deposit — SwiftKenya</p></div>
-  <div class="ra"><div class="lb">Amount Paid</div><div class="am">KES ${Number(d.amount).toLocaleString("en-KE")}</div></div>
-  <div class="rb">
-    <div class="row"><span class="rk">Customer</span><span class="rv">${esc(d.name)}</span></div>
-    <div class="row"><span class="rk">Phone</span><span class="rv">${esc(d.phone)}</span></div>
-    <div class="row"><span class="rk">M-Pesa Receipt</span><span class="rv">${esc(d.receipt||d.checkout_id||"—")}</span></div>
-    <div class="row"><span class="rk">Reference</span><span class="rv">${esc(d.reference||"DEPOSIT")}</span></div>
-    <div class="row"><span class="rk">Date &amp; Time</span><span class="rv">${esc(d.date)}</span></div>
-    <div class="row"><span class="rk">Status</span><span class="rv"><span class="badge">✅ Paid</span></span></div>
-  </div>
-  <div class="rf">Keep this receipt for your records. | swiftkenya.com</div>
-</div>
-<div class="wm">Generated ${new Date().toLocaleString("en-KE",{timeZone:"Africa/Nairobi"})}</div>
-</body></html>`;
+  // ── Live validation listeners ─────────────────────────────────────────────
+  nameInput.addEventListener('input', () => {
+    const r = validateName(nameInput.value);
+    setFieldState(nameInput, nameIcon, nameHint, r.state, r.msg);
+  });
 
-    const blob = new Blob([html], { type: "text/html" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `SwiftKenya-Receipt-${d.receipt||d.checkout_id||Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast("info", "Receipt Downloaded", "Open the file in a browser and use Ctrl+P to save as PDF.");
-  }
+  phoneInput.addEventListener('input', () => {
+    const r = validatePhone(phoneInput.value);
+    setFieldState(phoneInput, phoneIcon, phoneHint, r.state, r.msg);
+  });
 
-  function esc(s) {
-    return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-  }
-
-  // ── POLLING ───────────────────────────────────────────────────────────────
-  function startPolling() {
-    pollCount = 0;
-    document.getElementById("polling-section").style.display = "block";
-    document.getElementById("deposit-form").style.display = "none";
-    hideStatusPanel();
-    updatePollCounter();
-    pollTimer = setInterval(doPoll, POLL_INTERVAL);
-  }
-
-  function updatePollCounter() {
-    document.getElementById("poll-counter").textContent =
-      `Attempt ${pollCount + 1} of ${MAX_POLLS} — checking every 5 seconds…`;
-  }
-
-  async function doPoll() {
-    pollCount++;
-    updatePollCounter();
-
-    if (pollCount > MAX_POLLS) {
-      clearInterval(pollTimer);
-      document.getElementById("polling-section").style.display = "none";
-      document.getElementById("deposit-form").style.display = "block";
-      setBtnLoading(false, "💳 Send STK Push");
-      showStatusPanel("error","⏰","Payment Timed Out",
-        "We could not confirm your payment within the allowed time. If you entered your PIN, please contact support. Otherwise, try again.");
-      toast("error","Payment Timeout","No confirmation received. Please try again.");
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${BACKEND}/check-status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          checkout_id: checkoutId,
-          name: pollName,
-          phone: pollPhone,
-          amount: pollAmount,
-        }),
-      });
-
-      const contentType = resp.headers.get("content-type") || "";
-
-      if (contentType.includes("text/html")) {
-        // Success — receipt HTML returned (we ignore it; build our own display)
-        clearInterval(pollTimer);
-        document.getElementById("polling-section").style.display = "none";
-        setBtnLoading(false, "💳 Send STK Push");
-
-        const now = new Date().toLocaleString("en-KE",{timeZone:"Africa/Nairobi"});
-        showReceipt({
-          name:       pollName,
-          phone:      pollPhone,
-          amount:     pollAmount,
-          checkout_id: checkoutId,
-          receipt:    "",
-          reference:  `DEPOSIT-${Date.now()}`,
-          date:       now,
-        });
-        return;
-      }
-
-      const text = await resp.text();
-
-      // Still pending
-      if (text.toLowerCase().includes("pending") ||
-          text.toLowerCase().includes("accepted") ||
-          text.toLowerCase().includes("processing") ||
-          text.toLowerCase().includes("not yet") ) {
-        // keep polling
-        return;
-      }
-
-      // Cancelled / failed
-      if (resp.status !== 200 || text.toLowerCase().includes("cancel") ||
-          text.toLowerCase().includes("failed") || text.toLowerCase().includes("error") ||
-          text.toLowerCase().includes("insufficient") || text.toLowerCase().includes("incorrect") ||
-          text.toLowerCase().includes("timed out")) {
-        clearInterval(pollTimer);
-        document.getElementById("polling-section").style.display = "none";
-        document.getElementById("deposit-form").style.display = "block";
-        setBtnLoading(false, "💳 Send STK Push");
-        showStatusPanel("error","❌","Payment Failed", text);
-        toast("error","Payment Failed", text.slice(0,80));
-        return;
-      }
-
-    } catch (err) {
-      // Network error during poll — just skip this attempt
-      console.warn("Poll attempt failed:", err.message);
-    }
-  }
-
-  // ── FORM SUBMIT ───────────────────────────────────────────────────────────
-  document.getElementById("deposit-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    // Validate all fields
-    const name   = document.getElementById("f-name").value.trim();
-    const rawPh  = document.getElementById("f-phone").value.trim();
-    const rawAmt = document.getElementById("f-amount").value.trim();
-
-    let ok = true;
-
-    if (!name || name.length < 2) {
-      setFieldState(document.getElementById("f-name"), document.getElementById("hint-name"),
-        "error", "Please enter a valid full name (min 2 chars)");
-      ok = false;
-    }
-
-    const phone = normalizePhone(rawPh);
-    if (!phone) {
-      setFieldState(document.getElementById("f-phone"), document.getElementById("hint-phone"),
-        "error", "Invalid phone — use 07XXXXXXXX or 2547XXXXXXXX");
-      ok = false;
-    }
-
-    const amount = parseInt(rawAmt, 10);
-    if (!rawAmt || isNaN(amount) || amount <= 0) {
-      setFieldState(document.getElementById("f-amount"), document.getElementById("hint-amount"),
-        "error", "Please enter a valid whole number amount");
-      ok = false;
-    }
-
-    if (!ok) {
-      toast("error","Validation Failed","Please fix the highlighted fields before continuing.");
-      return;
-    }
-
-    // Ripple effect
-    const btn = document.getElementById("submit-btn");
-    const r = document.createElement("div");
-    r.className = "ripple";
-    r.style.cssText = "width:200px;height:200px;left:50%;top:50%;margin-left:-100px;margin-top:-100px;";
-    btn.appendChild(r);
-    setTimeout(() => r.remove(), 600);
-
-    setBtnLoading(true);
-    showOverlay("Sending STK Push to your phone…");
-    hideStatusPanel();
-
-    try {
-      const resp = await fetch(`${BACKEND}/deposit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: String(amount), phone: phone, name: name }),
-      });
-
-      const contentType = resp.headers.get("content-type") || "";
-      let data;
-
-      if (contentType.includes("application/json")) {
-        data = await resp.json();
-      } else {
-        const text = await resp.text();
-        hideOverlay();
-        setBtnLoading(false, "💳 Send STK Push");
-        showStatusPanel("error","❌","Payment Error", text);
-        toast("error","STK Push Failed", text.slice(0,80));
-        return;
-      }
-
-      hideOverlay();
-
-      if (!resp.ok || !data.success) {
-        const msg = data.message || data.error || "Failed to initiate payment. Try again.";
-        setBtnLoading(false, "💳 Send STK Push");
-        showStatusPanel("error","❌","Payment Error", msg);
-        toast("error","STK Push Failed", msg.slice(0,80));
-        return;
-      }
-
-      // Success — store info and start polling
-      checkoutId = data.checkout_id;
-      pollAmount = amount;
-      pollName   = name;
-      pollPhone  = phone;
-
-      toast("info","STK Push Sent!",`Check your phone (${phone}) and enter your M-Pesa PIN.`);
-      setBtnLoading(false, "💳 Send STK Push");
-      startPolling();
-
-    } catch (err) {
-      hideOverlay();
-      setBtnLoading(false, "💳 Send STK Push");
-      showStatusPanel("error","🔌","Connection Error",
-        `Could not reach the server: ${err.message}. Make sure the backend is running.`);
-      toast("error","Connection Error", err.message.slice(0,80));
+  amountInput.addEventListener('input', () => {
+    const r = validateAmount(amountInput.value);
+    setFieldState(amountInput, amountIcon, amountHint, r.state, r.msg);
+    const n = Number(amountInput.value);
+    if (!isNaN(n) && n > 0) {
+      amountDisplay.textContent = `KES ${n.toLocaleString('en-KE')}`;
+      amountDisplay.style.opacity = '1';
+    } else {
+      amountDisplay.textContent = '';
     }
   });
 
-  // ── RESET ─────────────────────────────────────────────────────────────────
-  function resetForm() {
-    clearInterval(pollTimer);
-    checkoutId = null;
-    pollCount  = 0;
-    document.getElementById("deposit-form").reset();
-    document.getElementById("deposit-form").style.display = "block";
-    document.getElementById("receipt-section").style.display = "none";
-    document.getElementById("polling-section").style.display = "none";
-    hideStatusPanel();
-    setBtnLoading(false, "💳 Send STK Push");
-    ["name","phone","amount"].forEach(f => {
-      const inp = document.getElementById("f-"+f);
-      inp.classList.remove("valid","error");
-    });
-    document.getElementById("hint-name").textContent   = "Enter the customer's full name";
-    document.getElementById("hint-phone").textContent  = "Format: 07XXXXXXXX or 2547XXXXXXXX";
-    document.getElementById("hint-amount").textContent = "Minimum amount: KES 1";
-    document.getElementById("hint-name").className     = "field-hint";
-    document.getElementById("hint-phone").className    = "field-hint";
-    document.getElementById("hint-amount").className   = "field-hint";
+  // ── Toast system ──────────────────────────────────────────────────────────
+  function toast(type, title, message, durationMs = 6000) {
+    const container = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.style.setProperty('--duration', `${durationMs/1000}s`);
+
+    const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
+    t.innerHTML = `
+      <div class="toast-icon">${icons[type] || 'ℹ️'}</div>
+      <div class="toast-body">
+        <div class="toast-title">${escHtml(title)}</div>
+        <div class="toast-msg">${escHtml(message)}</div>
+      </div>
+      <button class="toast-close" aria-label="Close">✕</button>
+    `;
+
+    const close = t.querySelector('.toast-close');
+    const remove = () => {
+      t.classList.add('leaving');
+      t.addEventListener('animationend', () => t.remove());
+    };
+    close.addEventListener('click', remove);
+    setTimeout(remove, durationMs);
+
+    container.appendChild(t);
+
+    // Auto-remove if more than 5 toasts
+    const toasts = container.querySelectorAll('.toast:not(.leaving)');
+    if (toasts.length > 5) toasts[0].querySelector('.toast-close').click();
   }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
+
+  // ── Loading overlay ───────────────────────────────────────────────────────
+  function showLoading(title, sub) {
+    loadingTitle.textContent = title;
+    loadingSub.textContent   = sub;
+    loadingOverlay.classList.add('active');
+  }
+  function hideLoading() {
+    loadingOverlay.classList.remove('active');
+  }
+
+  // ── Status panel helpers ──────────────────────────────────────────────────
+  function showStatusPanel(txnId) {
+    statusPanel.classList.add('active');
+    txnIdDisplay.textContent = 'ID: ' + txnId;
+    statusDot.className      = 'dot';
+    statusText.textContent   = 'Waiting for payment confirmation…';
+    statusSpinner.style.display = 'block';
+    openReceiptBtn.style.display = 'none';
+  }
+
+  function updateStatusPanel(status, desc) {
+    const labels = {
+      SUCCESS: '✅ Payment confirmed!',
+      FAILED:  '❌ Payment failed or cancelled.',
+      PENDING: '⏳ Waiting for payment…',
+    };
+    statusText.textContent = labels[status] || status;
+
+    if (status === 'SUCCESS') {
+      statusDot.className = 'dot success';
+      statusSpinner.style.display = 'none';
+      openReceiptBtn.style.display = 'block';
+    } else if (status === 'FAILED') {
+      statusDot.className = 'dot failed';
+      statusSpinner.style.display = 'none';
+    }
+  }
+
+  // ── Receipt Modal ─────────────────────────────────────────────────────────
+  function openReceiptModal(txnId) {
+    // Load receipt HTML into the modal via fetch
+    receiptPlain.innerHTML = `<div style="padding:40px;text-align:center;color:#555;">
+      <div style="font-size:32px;margin-bottom:16px;">⏳</div>
+      <div style="font-size:15px;">Loading receipt…</div>
+    </div>`;
+    receiptModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    fetch(`${API_BASE}/receipt/${txnId}`)
+      .then(r => r.text())
+      .then(html => {
+        receiptPlain.innerHTML = html;
+      })
+      .catch(err => {
+        receiptPlain.innerHTML = `<div style="padding:30px;color:#dc2626;font-family:sans-serif;">
+          <strong>Could not load receipt.</strong><br/><br/>
+          ${err.message || 'Network error'}
+        </div>`;
+      });
+  }
+
+  function closeReceiptModal() {
+    receiptModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  modalBackdrop.addEventListener('click', closeReceiptModal);
+  modalClose.addEventListener('click', closeReceiptModal);
+
+  openReceiptBtn.addEventListener('click', () => {
+    if (currentTxnId) openReceiptModal(currentTxnId);
+  });
+
+  // ── Polling ───────────────────────────────────────────────────────────────
+  function startPolling(txnId) {
+    pollCount = 0;
+    clearInterval(pollTimer);
+
+    pollTimer = setInterval(async () => {
+      pollCount++;
+
+      if (pollCount > POLL_MAX_TRIES) {
+        clearInterval(pollTimer);
+        statusSpinner.style.display = 'none';
+        statusText.textContent = '⏰ Timed out waiting for payment. Please check manually.';
+        toast('warning', 'Timed Out', 'No payment confirmation received within 3 minutes. Check your M-Pesa messages.', 8000);
+        resetBtn();
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${API_BASE}/status/${txnId}`);
+        const cType = resp.headers.get('content-type') || '';
+
+        if (!resp.ok || !cType.includes('application/json')) {
+          // Server returned error text — don't stop polling yet, might be transient
+          return;
+        }
+
+        const data = await resp.json();
+        const status = (data.status || 'PENDING').toUpperCase();
+
+        updateStatusPanel(status, data.resultDesc);
+
+        if (status === 'SUCCESS') {
+          clearInterval(pollTimer);
+          resetBtn();
+          toast('success', 'Payment Received! 🎉',
+            `KES ${Number(data.amount || 0).toLocaleString('en-KE')} received from ${data.customerName || data.phone}.\n` +
+            (data.mpesaReceiptNumber ? `M-Pesa Ref: ${data.mpesaReceiptNumber}` : ''), 10000);
+          openReceiptModal(txnId);
+        } else if (status === 'FAILED') {
+          clearInterval(pollTimer);
+          resetBtn();
+          const reason = data.resultDesc || 'The customer cancelled or did not enter PIN.';
+          toast('error', 'Payment Failed', reason, 10000);
+        }
+      } catch {
+        // Network blip — keep polling silently
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  // ── Reset button ──────────────────────────────────────────────────────────
+  function resetBtn() {
+    payBtn.disabled = false;
+    btnText.textContent = 'Send M-Pesa Prompt';
+    btnIcon.textContent = '📲';
+    // Remove spinner if any
+    const sp = payBtn.querySelector('.spinner');
+    if (sp) sp.remove();
+  }
+
+  function setBtnLoading() {
+    payBtn.disabled = true;
+    btnText.textContent = 'Sending…';
+    btnIcon.textContent = '';
+    if (!payBtn.querySelector('.spinner')) {
+      const sp = document.createElement('div');
+      sp.className = 'spinner';
+      payBtn.insertBefore(sp, btnText);
+    }
+  }
+
+  // ── Form submit ───────────────────────────────────────────────────────────
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const nameVal   = nameInput.value.trim();
+    const phoneVal  = phoneInput.value.trim();
+    const amountVal = amountInput.value.trim();
+
+    // Validate all fields
+    const nR = validateName(nameVal);
+    const pR = validatePhone(phoneVal);
+    const aR = validateAmount(amountVal);
+
+    setFieldState(nameInput,   nameIcon,   nameHint,   nR.state, nR.msg);
+    setFieldState(phoneInput,  phoneIcon,  phoneHint,  pR.state, pR.msg);
+    setFieldState(amountInput, amountIcon, amountHint, aR.state, aR.msg);
+
+    if (nR.state === 'err' || !nameVal) {
+      toast('error', 'Name Required', nR.msg || 'Please enter the customer\'s full name.');
+      nameInput.focus();
+      return;
+    }
+    if (pR.state === 'err' || !phoneVal) {
+      toast('error', 'Invalid Phone Number', pR.msg || 'Please enter a valid M-Pesa phone number.');
+      phoneInput.focus();
+      return;
+    }
+    if (aR.state === 'err' || !amountVal) {
+      toast('error', 'Invalid Amount', aR.msg || 'Please enter a valid deposit amount.');
+      amountInput.focus();
+      return;
+    }
+
+    // All good — fire
+    clearInterval(pollTimer);
+    setBtnLoading();
+    showLoading('Sending STK Push…', 'Check your phone for the M-Pesa payment prompt and enter your PIN.');
+
+    try {
+      const resp = await fetch(`${API_BASE}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:   nameVal,
+          phone:  phoneVal,
+          amount: Number(amountVal),
+        }),
+      });
+
+      hideLoading();
+
+      const cType = resp.headers.get('content-type') || '';
+
+      if (!resp.ok) {
+        // Read as text (server always sends errors as text)
+        const errText = await resp.text();
+        resetBtn();
+        toast('error', 'Payment Failed', errText || `Server returned status ${resp.status}.`, 12000);
+        return;
+      }
+
+      // Try JSON
+      let data;
+      if (cType.includes('application/json')) {
+        data = await resp.json();
+      } else {
+        const text = await resp.text();
+        resetBtn();
+        toast('error', 'Unexpected Response', text, 10000);
+        return;
+      }
+
+      if (!data.success) {
+        resetBtn();
+        toast('error', 'STK Push Failed', data.message || 'Payment could not be initiated.', 10000);
+        return;
+      }
+
+      // Success — STK sent
+      currentTxnId = data.transactionId;
+      showStatusPanel(currentTxnId);
+      startPolling(currentTxnId);
+
+      toast('info', 'Prompt Sent! 📲',
+        `M-Pesa payment prompt sent to ${phoneVal}.\nEnter your PIN to complete KES ${Number(amountVal).toLocaleString('en-KE')} deposit.`,
+        8000);
+
+    } catch (err) {
+      hideLoading();
+      resetBtn();
+      const errMsg = err.message.includes('fetch')
+        ? 'Cannot reach the payment server. Check your internet connection and try again.'
+        : `Network error: ${err.message}`;
+      toast('error', 'Connection Error', errMsg, 10000);
+    }
+  });
 </script>
 </body>
 </html>
